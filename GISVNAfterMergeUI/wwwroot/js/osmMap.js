@@ -33,7 +33,11 @@ window.initMapAndLoadData = async function(apiUrl, mapDivId = 'map') {
             });
 
             provLayer.bindPopup(`<b>${province.name}</b>`);
-            provLayer._meta = { id: province.id, name: province.name.toLowerCase() };
+            provLayer._meta = { 
+                id: province.id, 
+                name: province.name.toLowerCase(), 
+                legacyId: province.legacyId
+            };
 
             (province.communes || []).forEach(c => {
                 const cGeom = JSON.parse(c.boundary);
@@ -41,6 +45,12 @@ window.initMapAndLoadData = async function(apiUrl, mapDivId = 'map') {
                     color: 'green', weight: 1, fillOpacity: 0.25
                 });
                 cLayer.bindPopup(`<b>${c.name}</b><br/>Dân số: ${c.population} người<br/>Diện tích: ${c.area} km2`);
+                cLayer._meta = {
+                    id: c.id,
+                    name: c.name.toLowerCase(),
+                    legacyId: c.legacyId
+                };
+                
                 state.layers.push(cLayer);
             });
 
@@ -65,13 +75,17 @@ window.highlightProvince = function(searchText, mapDivId = 'map') {
 
     const query = searchText.toLowerCase();
     let found = null;
-
+    
+    console.log({ query });
+    
     // reset màu
     state.layers.forEach(l => l.setStyle && l.setStyle({ color: l._meta?.color || 'blue' }));
-
     for (const l of state.layers) {
         if (!l._meta) continue;
-        if (l._meta.name.includes(query) || l._meta.id?.toString() === query) {
+        if (l._meta.name.includes(query) || 
+            l._meta.id?.toString() === query || 
+            l._meta.legacyId?.toString() === query) 
+        {
             found = l;
             break;
         }
