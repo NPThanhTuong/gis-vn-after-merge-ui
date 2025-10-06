@@ -1,0 +1,49 @@
+@inject IJSRuntime JS
+
+<MudCard>
+    <MudCardHeader>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudTextField @bind-Value="_searchText" Label="Tìm tỉnh/thành phố" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SearchProvince">Tìm</MudButton>
+        </MudStack>
+
+    </MudCardHeader>
+    <MudCardContent>
+        <div id="@_mapDivId" style="height:620px; width:100%;"></div>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private readonly string _mapDivId = $"map_{Guid.NewGuid():N}";
+    private bool _initialized;
+    private string _searchText = string.Empty;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            // gọi hàm global đã được nạp qua <script src="/js/osmMap.js">
+            await JS.InvokeVoidAsync("initMapAndLoadData", "/api/v1/provinces", _mapDivId);
+            _initialized = true;
+        }
+    }
+    
+    private async Task SearchProvince()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText) && !_initialized)
+            return;
+
+        await JS.InvokeVoidAsync("highlightProvince",  _searchText.Trim(), _mapDivId);
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("disposeMap", _mapDivId);
+        }
+        catch (JSDisconnectedException) { /* circuit đã đóng => safe ignore */ }
+        catch (JSException) { /* log nếu cần */ }
+    }
+}
