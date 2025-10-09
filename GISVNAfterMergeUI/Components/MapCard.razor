@@ -12,6 +12,13 @@
                 AdornmentIcon="@Icons.Material.Filled.Search" 
                 OnKeyUp="@HandleKeyUp"/>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@SearchProvince">Tìm</MudButton>
+            <MudSwitch
+                Value="_isCommuneLayerVisible"
+                ValueChanged="@(async (bool val) => await OnCommuneLayerToggleChanged(val))"
+                ThumbIcon="@(_isCommuneLayerVisible ? Icons.Material.Filled.Done : Icons.Material.Filled.Close)"
+                ThumbIconColor="@(_isCommuneLayerVisible ? Color.Success : Color.Error)">
+                Hiển thị lớp phường/xã
+            </MudSwitch>
         </MudStack>
 
     </MudCardHeader>
@@ -24,13 +31,20 @@
     private readonly string _mapDivId = $"map_{Guid.NewGuid():N}";
     private bool _initialized;
     private string _searchText = string.Empty;
+    private bool _isCommuneLayerVisible = false;
+    private bool _isLoading = true;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_initialized)
         {
             // gọi hàm global đã được nạp qua <script src="/js/osmMap.js">
-            await JS.InvokeVoidAsync("initMapAndLoadData", "/api/v1/provinces", _mapDivId);
+            await JS.InvokeVoidAsync(
+                "initMapAndLoadData", 
+                "/api/v1/provinces/geojson", 
+                "/api/v1/communes/geojson", 
+                _mapDivId,
+                _isCommuneLayerVisible);
             _initialized = true;
         }
     }
@@ -50,6 +64,13 @@
         {
             await SearchProvince();
         }
+    }
+    
+    private async Task OnCommuneLayerToggleChanged(bool newValue)
+    {
+        _isCommuneLayerVisible = newValue;
+        // Gọi hàm JavaScript để bật/tắt lớp phường/xã
+        await JS.InvokeVoidAsync("toggleCommuneLayer", _mapDivId, _isCommuneLayerVisible);
     }
 
     public async ValueTask DisposeAsync()
